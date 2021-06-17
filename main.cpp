@@ -9,9 +9,10 @@ std::mutex mutex_empty_data;
 std::mutex mutex_full_data;
 std::condition_variable no_data_condition;
 std::condition_variable collection_full;
+
 bool flag = true;
 void fib(int number) {
-	std::chrono::milliseconds(10);
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	int a = 1, b = 1, c;
 	if (number <= 2) {
 		std::cout << b << std::endl;
@@ -25,21 +26,28 @@ void fib(int number) {
 }
 
 void runThread(std::queue<int>& queue) {
-	std::unique_lock<std::mutex> lock_empty_data(mutex_empty_data);
+	int number;
 	while (flag) {
-		while (queue.empty())
-			no_data_condition.wait(lock_empty_data);
-		fib(queue.front());
-		queue.pop();
-		collection_full.notify_one();
+		{
+			std::unique_lock<std::mutex> lock_empty_data(mutex_empty_data);
+			while (queue.empty()) {
+				no_data_condition.wait(lock_empty_data);
+			}
+			number = queue.front();
+			queue.pop();
+			collection_full.notify_one();
+		}
+		fib(number);
 	}
+
 }
 
 void addElem(std::queue<int>& queue) {
 	int element;
-	std::unique_lock<std::mutex> lock_full_data(mutex_full_data);
 	std::ifstream input("input.txt");
 	while (input >> element) {
+		std::unique_lock<std::mutex> lock_full_data(mutex_full_data);
+		std::cout << queue.size() << std::endl;
 		while (queue.size() >= 100) {
 			collection_full.wait(lock_full_data);
 		}
@@ -55,17 +63,16 @@ void addElem(std::queue<int>& queue) {
 
 int main() {
 	std::queue <int> queue;
-
-	std::thread producer(&addElem, std::ref(queue));
-
 	std::vector<std::thread> threads;
-	for (int i = 0; i < 4; i++) 
+	std::thread producer(&addElem, std::ref(queue));
+	for (int i = 0; i < 4; i++) {
 		threads.push_back(std::thread(&runThread, std::ref(queue)));
-	producer.join();
+	}
+	producer.join();	
 
-	for (int i = 0; i < 4; i++) 
+	for (int i = 0; i < 4; i++) {
 		threads[i].join();
-
+	}
 
 	return 0;
 }
