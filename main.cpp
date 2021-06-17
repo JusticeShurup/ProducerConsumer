@@ -4,15 +4,13 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+std::atomic_bool flag = true;
 
 std::mutex mutex_empty_data;
 std::mutex mutex_full_data;
 std::condition_variable no_data_condition;
 std::condition_variable collection_full;
-
-bool flag = true;
 void fib(int number) {
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	int a = 1, b = 1, c;
 	if (number <= 2) {
 		std::cout << b << std::endl;
@@ -22,7 +20,7 @@ void fib(int number) {
 		c = a + b;
 		a = b; b = c;
 	}
-	std::cout << c << std::endl;
+	std::cout << c  << std::endl;
 }
 
 void runThread(std::queue<int>& queue) {
@@ -47,7 +45,6 @@ void addElem(std::queue<int>& queue) {
 	std::ifstream input("input.txt");
 	while (input >> element) {
 		std::unique_lock<std::mutex> lock_full_data(mutex_full_data);
-		std::cout << queue.size() << std::endl;
 		while (queue.size() >= 100) {
 			collection_full.wait(lock_full_data);
 		}
