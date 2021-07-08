@@ -85,6 +85,6 @@ int main() {
 	}
 	producer.join();
 	pool.joinAll();
-
+	delete &target
 	return 0;
 }
